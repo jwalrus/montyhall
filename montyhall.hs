@@ -1,19 +1,37 @@
 import System.Environment
 import System.Random
 
-data Prize = Car | Goat deriving (Eq, Show)
-data Door = One | Two | Three deriving (Eq, Show, Read)
-
+-- ---------------
+-- Monty Hall Utility
+-- ---------------
 
 main = do 
     argList <- getArgs
     dispatch argList
 
 dispatch :: [String] -> IO ()
+dispatch ("help":_) = putStrLn help
 dispatch ("play":_) = playGame
 dispatch ("simulate":n:"keep":_) = runSimulation (read n) keepDoor
 dispatch ("simulate":n:"switch":_) = runSimulation (read n) switchDoor
-dispatch _ = help
+dispatch _ = putStrLn "invalid input. run 'montyhall help' for usage"
+
+help = "Usage:\n\
+\    montyhall play\n\
+\    montyhall simulate <number_simulation> <keep|switch>\n\
+\    montyhall help"
+
+
+-- ---------------
+-- model 
+-- ---------------
+data Prize = Car | Goat deriving (Eq, Show)
+data Door = One | Two | Three deriving (Eq, Show, Read)
+
+
+-- ---------------
+-- modes
+-- ---------------
 
 playGame = do
     gen <- getStdGen
@@ -28,6 +46,18 @@ playGame = do
     let prize = executeChoice choice door contestentDoor
     putStrLn $ "Congratulatons! You have won a " ++ show prize
 
+
+runSimulation :: Int -> (Door -> Door -> Prize) -> IO ()
+runSimulation n strategy = do
+    gen <- getStdGen
+    let wins = length $ filter (\x -> x == Car) $ take n $ simulate gen strategy
+    putStrLn $ "won " ++ show wins ++ " out of " ++ show n ++ " games."
+
+
+-- ---------------
+-- functions
+-- ---------------
+
 -- todo: change return type to Either String Door
 toDoor :: [Char] -> Door
 toDoor "1" = One 
@@ -40,15 +70,6 @@ executeChoice :: [Char] -> (Door -> Door -> Prize)
 executeChoice "N" = keepDoor
 executeChoice "Y" = switchDoor
 executeChoice bad = error $ "You must pick either Y or N... not " ++ bad
-
-runSimulation :: Int -> (Door -> Door -> Prize) -> IO ()
-runSimulation n strategy = do
-    gen <- getStdGen
-    let wins = length $ filter (\x -> x == Car) $ take n $ simulate gen strategy
-    putStrLn $ "won " ++ show wins ++ " out of " ++ show n ++ " games."
-
-help = do
-    putStrLn "TODO - create help message."
 
 simulate :: StdGen -> (Door -> Door -> Prize) -> [Prize]
 simulate gen strategy = 
