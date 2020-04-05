@@ -2,7 +2,8 @@ import System.Environment
 import System.Random
 
 data Prize = Car | Goat deriving (Eq, Show)
-data Door = One | Two | Three deriving (Eq, Show)
+data Door = One | Two | Three deriving (Eq, Show, Read)
+
 
 main = do 
     argList <- getArgs
@@ -17,15 +18,28 @@ dispatch _ = help
 playGame = do
     gen <- getStdGen
     let (door, gen') = pickDoor gen
-        (choice, gen'') = pickDoor gen'
-        (remainingDoor, gen''') = eliminateDoor gen'' door choice
-    putStrLn $ "The car is behind door number " ++ show door
-    putStrLn $ "The contestent chose door number " ++ show choice
-    putStrLn $ "The remaining choice is " ++ show remainingDoor
-    let prize = keepDoor door choice
-    putStrLn $ "You win a " ++ show prize ++ "!"
-    let (sim, _) = simulateGame gen switchDoor
-    putStrLn $ "simulation result = " ++ show sim
+    putStrLn "Pick your door! (1, 2, or 3)"
+    contestantDoorRaw <- getLine
+    let contestentDoor = toDoor contestantDoorRaw
+        (eliminatedDoor, _) = eliminateDoor gen' door contestentDoor
+    putStrLn $ "Monty opens door " ++ show eliminatedDoor ++ " revealing a Goat!"
+    putStrLn $ "Do you want to switch doors? (Y or N)"
+    choice <- getLine
+    let prize = executeChoice choice door contestentDoor
+    putStrLn $ "Congratulatons! You have won a " ++ show prize
+
+-- todo: change return type to Either String Door
+toDoor :: [Char] -> Door
+toDoor "1" = One 
+toDoor "2" = Two 
+toDoor "3" = Three
+toDoor bad = error $ "You must pick 1, 2, or 3... not " ++ bad
+
+-- todo: change return type to Either String Door
+executeChoice :: [Char] -> (Door -> Door -> Prize)
+executeChoice "N" = keepDoor
+executeChoice "Y" = switchDoor
+executeChoice bad = error $ "You must pick either Y or N... not " ++ bad
 
 runSimulation :: Int -> (Door -> Door -> Prize) -> IO ()
 runSimulation n strategy = do
