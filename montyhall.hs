@@ -1,6 +1,8 @@
 import System.Environment
 import System.Random
 
+data Prize = Car | Goat deriving (Eq, Show)
+
 main = do 
     argList <- getArgs
     dispatch argList
@@ -20,25 +22,25 @@ playGame = do
     putStrLn $ "The contestent chose door number " ++ show choice
     putStrLn $ "The remaining choice is " ++ show remainingDoor
     let prize = keepDoor door choice
-    putStrLn $ "You win a " ++ prize
+    putStrLn $ "You win a " ++ show prize ++ "!"
     let (sim, _) = simulateGame gen switchDoor
-    putStrLn $ "simulation result = " ++ sim
+    putStrLn $ "simulation result = " ++ show sim
 
-runSimulation :: Int -> (Int -> Int -> String) -> IO ()
+runSimulation :: Int -> (Int -> Int -> Prize) -> IO ()
 runSimulation n strategy = do
     gen <- getStdGen
-    let wins = length $ filter (\x -> x == "car!!!") $ take n $ simulate gen strategy
+    let wins = length $ filter (\x -> x == Car) $ take n $ simulate gen strategy
     putStrLn $ "won " ++ show wins ++ " out of " ++ show n ++ " games."
 
 help = do
     putStrLn "TODO - create help message."
 
-simulate :: StdGen -> (Int -> Int -> String) -> [String]
+simulate :: StdGen -> (Int -> Int -> Prize) -> [Prize]
 simulate gen strategy = 
     let (prize, gen') = simulateGame gen strategy
     in prize : simulate gen' strategy
 
-simulateGame :: StdGen -> (Int -> Int -> String) -> (String, StdGen)
+simulateGame :: StdGen -> (Int -> Int -> Prize) -> (Prize, StdGen)
 simulateGame gen strategy = 
     let (door, gen') = setupGame gen
         (choice, gen'') = contestantPickDoor gen'
@@ -70,12 +72,12 @@ chooseOne gen xs =
         (i, gen') = randomR (0,n) gen :: (Int, StdGen)
     in (xs !! i, gen')
 
-switchDoor :: Int -> Int -> String
+switchDoor :: Int -> Int -> Prize
 switchDoor car door 
-    | car /= door = "car!!!"
-    | otherwise   = "goat :("
+    | car /= door = Car
+    | otherwise   = Goat
 
-keepDoor :: Int -> Int -> String
+keepDoor :: Int -> Int -> Prize
 keepDoor car door 
-    | car == door = "car!!!"
-    | otherwise   = "goat :("
+    | car == door = Car
+    | otherwise   = Goat
