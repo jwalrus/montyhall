@@ -2,6 +2,7 @@ import System.Environment
 import System.Random
 
 data Prize = Car | Goat deriving (Eq, Show)
+data Door = One | Two | Three deriving (Eq, Show)
 
 main = do 
     argList <- getArgs
@@ -15,8 +16,8 @@ dispatch _ = help
 
 playGame = do
     gen <- getStdGen
-    let (door, gen') = setupGame gen
-        (choice, gen'') = contestantPickDoor gen'
+    let (door, gen') = pickDoor gen
+        (choice, gen'') = pickDoor gen'
         (remainingDoor, gen''') = eliminateDoor gen'' door choice
     putStrLn $ "The car is behind door number " ++ show door
     putStrLn $ "The contestent chose door number " ++ show choice
@@ -26,7 +27,7 @@ playGame = do
     let (sim, _) = simulateGame gen switchDoor
     putStrLn $ "simulation result = " ++ show sim
 
-runSimulation :: Int -> (Int -> Int -> Prize) -> IO ()
+runSimulation :: Int -> (Door -> Door -> Prize) -> IO ()
 runSimulation n strategy = do
     gen <- getStdGen
     let wins = length $ filter (\x -> x == Car) $ take n $ simulate gen strategy
@@ -35,49 +36,46 @@ runSimulation n strategy = do
 help = do
     putStrLn "TODO - create help message."
 
-simulate :: StdGen -> (Int -> Int -> Prize) -> [Prize]
+simulate :: StdGen -> (Door -> Door -> Prize) -> [Prize]
 simulate gen strategy = 
     let (prize, gen') = simulateGame gen strategy
     in prize : simulate gen' strategy
 
-simulateGame :: StdGen -> (Int -> Int -> Prize) -> (Prize, StdGen)
+simulateGame :: StdGen -> (Door -> Door -> Prize) -> (Prize, StdGen)
 simulateGame gen strategy = 
-    let (door, gen') = setupGame gen
-        (choice, gen'') = contestantPickDoor gen'
+    let (door, gen') = pickDoor gen
+        (choice, gen'') = pickDoor gen'
         (remainingDoor, gen''') = eliminateDoor gen'' door choice
         prize = strategy door choice
     in (prize, gen''')
 
 
-setupGame :: StdGen ->  (Int, StdGen)
-setupGame gen = randomR (1,3) gen :: (Int, StdGen)
+pickDoor :: StdGen ->  (Door, StdGen)
+pickDoor gen = chooseOne gen [One, Two, Three]
 
-contestantPickDoor :: StdGen -> (Int, StdGen)
-contestantPickDoor gen = randomR (1,3) gen :: (Int, StdGen)
+eliminateDoor :: StdGen -> Door -> Door -> (Door, StdGen)
+eliminateDoor gen One One = chooseOne gen [Two,Three]
+eliminateDoor gen Two Two = chooseOne gen [One,Three]
+eliminateDoor gen Three Three = chooseOne gen [One,Two]
+eliminateDoor gen One Two = (One, gen)
+eliminateDoor gen One Three = (One, gen)
+eliminateDoor gen Two One = (Two, gen)
+eliminateDoor gen Two Three = (Two, gen)
+eliminateDoor gen Three One = (Three, gen)
+eliminateDoor gen Three Two = (Three, gen)
 
-eliminateDoor :: StdGen -> Int -> Int -> (Int, StdGen)
-eliminateDoor gen 1 1 = chooseOne gen [2,3]
-eliminateDoor gen 2 2 = chooseOne gen [1,3]
-eliminateDoor gen 3 3 = chooseOne gen [1,2]
-eliminateDoor gen 1 2 = (1, gen)
-eliminateDoor gen 1 3 = (1, gen)
-eliminateDoor gen 2 1 = (2, gen)
-eliminateDoor gen 2 3 = (2, gen)
-eliminateDoor gen 3 1 = (3, gen)
-eliminateDoor gen 3 2 = (3, gen)
-
-chooseOne :: StdGen -> [Int] -> (Int, StdGen)
+chooseOne :: StdGen -> [Door] -> (Door, StdGen)
 chooseOne gen xs =
     let n = (length xs) - 1
         (i, gen') = randomR (0,n) gen :: (Int, StdGen)
     in (xs !! i, gen')
 
-switchDoor :: Int -> Int -> Prize
+switchDoor :: Door -> Door -> Prize
 switchDoor car door 
     | car /= door = Car
     | otherwise   = Goat
 
-keepDoor :: Int -> Int -> Prize
+keepDoor :: Door -> Door -> Prize
 keepDoor car door 
     | car == door = Car
     | otherwise   = Goat
